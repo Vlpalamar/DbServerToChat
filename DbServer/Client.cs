@@ -155,19 +155,27 @@ namespace DbServer
 
                         }
                         break;
-                    case Commands.SendMessage:
-                        if (request.entity== Entities.Message)
+                    case Commands.SendMessageToAll:
+                        if (request.entity== Entities.UserMessage)
                         {
-                            Response response = new Response();
-                            response.success = true;
-                            response.code = ResponseCodes.OK;
-                            string message = request.data.ToString();
-                            response.data = message;
-                            sendResponse(ref response);
+                            UserMessage message =(UserMessage) request.data;
+                            Server.SendToAll(message);
+
                         }
                         break;
                 }
             }
+        }
+
+
+        public void SendMesagge(UserMessage message)
+        {
+            Response response = new Response();
+            response.success = true;
+            response.code = ResponseCodes.OK;
+            response.Entity = Entities.UserMessage;
+            response.data = message;
+            sendResponse(ref response);
         }
 
         /// <summary>
