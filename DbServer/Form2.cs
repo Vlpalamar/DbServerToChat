@@ -16,6 +16,7 @@ namespace DbServer
         {
             InitializeComponent();
             Server.GetInstance().Run();
+           
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -27,5 +28,8 @@ namespace DbServer
         {
 
         }
+
+        
+
     }
 }

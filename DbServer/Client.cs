@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ namespace DbServer
         private TcpClient tcpClient;
         private NetworkStream stream;
         private BinaryFormatter bf;
-        private string Name;
+        public string Name;
  
 
         public Task task;
@@ -51,18 +52,22 @@ namespace DbServer
             
 
             User u = (User)request.data;
-            foreach (User user in Server.users)
+            this.Name = u.name;
+            if (Server.users.Count>0)
             {
-                if (u.email==user.email && u.pswd== user.pswd)
+                foreach (User user in Server.users)
                 {
-                    response.code = ResponseCodes.OK;
-                    response.success = true;
-                    response.data = user;
-                    sendResponse(ref response);
-                    Name = u.name;
-                    return true;
+                    if (u.email==user.email && u.pswd== user.pswd)
+                    {
+                        response.code = ResponseCodes.OK;
+                        response.success = true;
+                        response.data = user;
+                        sendResponse(ref response);
+                        Name = u.name;
+                        //Server.HelloNewUser();
+                        return true;
+                    }
                 }
-
             }
 
             response.code = ResponseCodes.Auth;
@@ -134,7 +139,15 @@ namespace DbServer
                     return;
                 }
 
-                if (!stream.DataAvailable) continue;
+                try
+                {
+                    if (!stream.DataAvailable) continue;
+                }
+                catch (Exception e)
+                {
+                    continue;
+                }
+                
 
                 Request request = receiveRequest();
                 switch (request.command)
@@ -142,31 +155,74 @@ namespace DbServer
                     case Commands.Create:
                         if (request.entity == Entities.User)
                         {
-                       
                             MessageBox.Show(" Пришел запрос на регистрацию пользователя");
                             Response response = new Response();
                             response.success = true;
                             response.code = ResponseCodes.OK;
                             User u = (User)request.data;
+                            this.Name = u.name;
                             response.data = u;
                             Server.users.Add(u);
+                            //Server.HelloNewUser();
                             sendResponse( ref response);
-
-
                         }
                         break;
                     case Commands.SendMessageToAll:
                         if (request.entity== Entities.UserMessage)
                         {
                             UserMessage message =(UserMessage) request.data;
-                            Server.SendToAll(message);
+                            //Server.NewMessage();
+                            Server.SendMessageToAll(message);
+                        }
+                        break;
+                    case Commands.UserBye:
+                        {
+                            //Server.ByuUser();
+                            Bye();
+                        }
+                        break;
+                    case Commands.ShowUsers:
+                        {
+                        Server.SendUserListToAll();
 
                         }
                         break;
+                    case Commands.AddToBlackList:
+                        if (request.entity == Entities.User)
+                        {
+
+                           
+
+                            Response response = new Response();
+                            response.success = true;
+                            response.code = ResponseCodes.OK;
+                            User u = (User)request.data;
+                            response.data = u;
+                            foreach (User user in Server.users)
+                            {
+                                if (user.name== u.name)
+                                {
+                                    user.BlackList = u.BlackList;
+                                }
+                            }
+                            sendResponse(ref response);
+                        }
+                        break;
+
+
                 }
             }
         }
 
+        public void SendUsers(List<User> users)
+        {
+            Response response = new Response();
+            response.success = true;
+            response.code = ResponseCodes.OK;
+            response.Entity = Entities.UserList;
+            response.data = users;
+            sendResponse(ref response);
+        }
 
         public void SendMesagge(UserMessage message)
         {
@@ -185,6 +241,19 @@ namespace DbServer
         {
             Server.tasks.Remove(task);
             Server.clients.Remove(this);
+            if (this.Name != null) 
+            {
+                foreach (User user in Server.users)
+                {
+                    if (user.name==this.Name)
+                    {
+                        user.isOnline = false;
+                        break;
+                        
+                    }
+                }
+            }
+           
             stream.Close();
             tcpClient.Close();
         }
